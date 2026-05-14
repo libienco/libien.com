@@ -1,13 +1,58 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { createClient } from "@sanity/client";
 
-// 每60秒自动增量更新，Sanity后台改完自动同步
+// 60秒自动增量更新，后台改完产品1分钟内自动同步
 export const revalidate = 60;
 
-export default function HomePage() {
+// ======================
+// 只需要改这里！替换成你的 Sanity 项目ID
+// ======================
+const client = createClient({
+  projectId: "xmpsw0cv", // 比如 abc123xyz
+  dataset: "production",
+  apiVersion: "2024-01-01",
+  useCdn: true,
+});
+
+// 产品查询语句
+const getProductsQuery = `*[_type == "product"] | order(_createdAt desc) {
+  _id,
+  title,
+  description,
+  price,
+  "imageUrl": image.asset->url,
+  category
+}`;
+
+// 产品类型定义
+interface Product {
+  _id: string;
+  title: string;
+  description: any;
+  price: number;
+  imageUrl: string;
+  category: string;
+}
+
+// ✅ 新增：Sanity富文本转纯文本函数（不需要任何额外包）
+function portableTextToPlainText(blocks: any[]): string {
+  if (!blocks) return "";
+  return blocks
+    .map((block) => {
+      if (block._type !== "block" || !block.children) return "";
+      return block.children.map((child: any) => child.text).join("");
+    })
+    .join("\n");
+}
+
+export default async function HomePage() {
+  // 从 Sanity 获取所有产品
+  const products: Product[] = await client.fetch(getProductsQuery);
+
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      {/* 1. 全屏首屏 Banner */}
+      {/* 1. 全屏首屏 Banner 对标梵高博物馆 */}
       <section className="relative w-full h-[85vh] overflow-hidden">
         <div className="absolute inset-0 bg-black/30 z-10"></div>
         <Image
@@ -27,7 +72,7 @@ export default function HomePage() {
           <p className="text-gray-100 text-xl font-light mb-8">
             Inheriting classic craftsmanship · Art collection ornament
           </p>
-          <Link href="#" className="btn-white">
+          <Link href="/products" className="btn-white">
             View Collection
           </Link>
         </div>
@@ -60,7 +105,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. 精选产品区块 */}
+      {/* 3. 精选产品区块 - 自动从 Sanity 读取！ */}
       <section className="bg-gray-50 dark:bg-gray-900 py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -70,58 +115,39 @@ export default function HomePage() {
             </p>
           </div>
 
+          {/* 动态渲染产品 - 后台加几个，这里就显示几个 */}
           <div className="grid md:grid-cols-3 gap-8">
-            {/* 产品卡片1 */}
-            <div className="product-card">
-              <div className="relative h-60 overflow-hidden">
-                <Image
-                  src="/product-1.jpg"
-                  alt="Classic Glass Ornament Series"
-                  fill
-                  className="object-cover"
-                />
+            {products.map((product) => (
+              <div key={product._id} className="product-card">
+                <div className="relative h-60 overflow-hidden">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-light mb-2">{product.title}</h3>
+                  {/* ✅ 这里用了转换函数，错误消失 */}
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                    {portableTextToPlainText(product.description)}
+                  </p>
+                  <p className="text-lg font-medium">${product.price}</p>
+                </div>
               </div>
-              <div className="p-6">
-                <h3 className="text-xl font-light mb-2">Classic Series</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Hand-blown glass decoration</p>
-              </div>
-            </div>
-
-            {/* 产品卡片2 */}
-            <div className="product-card">
-              <div className="relative h-60 overflow-hidden">
-                <Image
-                  src="/product-2.jpg"
-                  alt="Luxury Gift Glass Series"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-light mb-2">Luxury Gift Series</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Corporate custom gift</p>
-              </div>
-            </div>
-
-            {/* 产品卡片3 */}
-            <div className="product-card">
-              <div className="relative h-60 overflow-hidden">
-                <Image
-                  src="/product-3.jpg"
-                  alt="Limited Art Edition Glass"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-light mb-2">Limited Art Edition</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Art collection level</p>
-              </div>
-            </div>
+            ))}
           </div>
 
+          {/* 如果后台还没有产品，显示提示 */}
+          {products.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No products yet. Add some in your Sanity Studio!</p>
+            </div>
+          )}
+
           <div className="text-center mt-12">
-            <Link href="#" className="btn-primary">
+            <Link href="/products" className="btn-primary">
               All Products
             </Link>
           </div>
@@ -136,7 +162,7 @@ export default function HomePage() {
             We provide exclusive customized services for enterprises, brands and institutions. 
             Support exclusive pattern, logo, packaging customization, perfect for business gifts and annual gifts.
           </p>
-          <Link href="#" className="btn-primary">
+          <Link href="/contact" className="btn-primary">
             Contact For Custom
           </Link>
         </div>

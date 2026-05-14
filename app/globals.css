@@ -19,8 +19,57 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 全局基础样式 */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    @apply antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-light tracking-tight;
+  }
+
+  p {
+    @apply leading-relaxed text-gray-600 dark:text-gray-300;
+  }
+}
+
+/* 自定义组件样式 */
+@layer components {
+  /* 统一按钮样式 完全对标梵高博物馆 */
+  .btn-primary {
+    @apply border border-gray-800 dark:border-gray-200 
+           text-gray-800 dark:text-gray-200 
+           px-8 py-3 inline-block 
+           hover:bg-gray-800 hover:text-white 
+           dark:hover:bg-white dark:hover:text-black 
+           transition-all duration-300;
+  }
+
+  .btn-white {
+    @apply border border-white text-white 
+           px-8 py-3 inline-block 
+           hover:bg-white hover:text-black 
+           transition-all duration-300;
+  }
+
+  /* 产品卡片样式 原生CSS实现悬停放大效果 */
+  .product-card {
+    @apply bg-white dark:bg-gray-900 shadow-sm overflow-hidden;
+  }
+
+  .product-card img {
+    transition: transform 500ms ease;
+  }
+
+  .product-card:hover img {
+    transform: scale(1.05);
+  }
 }
